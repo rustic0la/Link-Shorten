@@ -1,22 +1,28 @@
 const db = require('../utils/db');
 const validUrl = require('valid-url');
 const getShort = require('../utils/getShort');
-//const redis = require('redis');
-//const client = redis.createClient(6379);
-/*
+
+const redis = require('redis');
+const REDIS_PORT = process.env.PORT || 6379;
+
+const client = redis.createClient(REDIS_PORT);
+
 const cache = (req, res, next) => {
     const short = req.params.id;
-    clent.get(short, (err, data) => {
+    client.get(short, (err, data) => {
         if (err) {
             throw (err);
         }
         if (data !== null) {
-            setResponse();
+            //const fullUrl = `localhost:3002/${short}`;
+            //const long = await db.findLongAddress(fullUrl);
+            res.writeHead(301, { 'location': data.long_url});
+            res.end();
         } else {
             next();
         }
     })
-}*/
+}
 
 const sendJSONResponce = (res, status, content) => {
     res.status(status);
@@ -54,17 +60,19 @@ const addressesReadOne = async (req, res, next) => {
         const long = await db.findLongAddress(fullUrl);
         if (!long) {
             sendJSONResponce(res, 404, { "message": "Link is not found" });
+        } else {
+            client.set(short, long);
+            res.writeHead(301, { 'location': long.long_url });
+            res.end();
         }
-        res.writeHead(301, { 'location': long.long_url });
-        res.end();
     } catch (err) {
         next(err);
     }
-
 }
 
 module.exports = {
     addressesList,
     addressesCreate,
     addressesReadOne,
+    cache,
 }
